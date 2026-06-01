@@ -1,5 +1,5 @@
 server:
-  listen_tailscale: "100.64.0.1:9527"
+  listen_tailscale: "100.92.141.13:9527"
   listen_local: "127.0.0.1:9527"
 
 auth:
@@ -15,9 +15,10 @@ session:
 claude:
   binary: "claude"
   env:
-    ANTHROPIC_BASE_URL: ""
-    ANTHROPIC_AUTH_TOKEN: ""
-    ANTHROPIC_MODEL: ""
+    ANTHROPIC_BASE_URL: "https://api.deepseek.com/anthropic"
+    ANTHROPIC_AUTH_TOKEN: "sk-664b596ab41f49eaa70adc3cb28cfcb5"
+    ANTHROPIC_MODEL: "deepseek-v4-pro[1m]"
+    ANTHROPIC_SMALL_MODEL: "deepseek-v4-flash"
 
 notify:
   fcm_enabled: true

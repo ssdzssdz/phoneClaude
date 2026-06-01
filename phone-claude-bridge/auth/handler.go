@@ -83,6 +83,8 @@ func (h *AuthHandler) HandlePair(w http.ResponseWriter, r *http.Request) {
 	}
 	h.mu.Unlock()
 
+	log.Printf("🔑 Pairing PIN: %s (device: %s, expires in 5 min)", pin, req.DeviceName)
+
 	json.NewEncoder(w).Encode(map[string]string{
 		"pin":         pin,
 		"expires_in":  "300",
