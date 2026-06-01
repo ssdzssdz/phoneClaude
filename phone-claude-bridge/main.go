@@ -2,7 +2,16 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+
+	"phone-claude-bridge/config"
+	"phone-claude-bridge/session"
+	"phone-claude-bridge/store"
+	"phone-claude-bridge/transport"
 )
 
 func main() {
@@ -13,7 +22,55 @@ func main() {
 }
 
 func run() error {
-	fmt.Println("phone-claude-bridge starting...")
-	// TODO: load config, init store, start server
-	select {} // block forever for now
+	cfg, err := config.Load("")
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
+
+	db, err := store.Open("phone-claude-bridge.db")
+	if err != nil {
+		return fmt.Errorf("open store: %w", err)
+	}
+	defer db.Close()
+
+	sm := session.NewManager(cfg, db)
+	sm.StartIdleReaper()
+
+	handler := transport.NewHandler(sm, db)
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	// Start local listener
+	localServer := &http.Server{
+		Addr:    cfg.Server.ListenLocal,
+		Handler: mux,
+	}
+	go func() {
+		log.Printf("listening on %s (local)", cfg.Server.ListenLocal)
+		if err := localServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("local server error: %v", err)
+		}
+	}()
+
+	// Start Tailscale listener
+	tsServer := &http.Server{
+		Addr:    cfg.Server.ListenTailscale,
+		Handler: mux,
+	}
+	go func() {
+		log.Printf("listening on %s (tailscale)", cfg.Server.ListenTailscale)
+		if err := tsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("tailscale server error: %v", err)
+		}
+	}()
+
+	log.Println("phone-claude-bridge is running")
+
+	// Wait for shutdown
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	<-sigCh
+
+	log.Println("shutting down...")
+	return nil
 }
