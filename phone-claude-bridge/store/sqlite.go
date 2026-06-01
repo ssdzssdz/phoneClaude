@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // Store is the SQLite-backed persistence layer for the bridge daemon.
@@ -48,7 +48,7 @@ type DeviceRow struct {
 // Open opens (or creates) the SQLite database at path, enables WAL journal mode
 // and foreign keys, and runs the migration.
 func Open(path string) (*Store, error) {
-	db, err := sql.Open("sqlite3", path)
+	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}

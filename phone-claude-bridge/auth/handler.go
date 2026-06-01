@@ -14,6 +14,8 @@ import (
 	"phone-claude-bridge/config"
 )
 
+var generatedSecretOnce sync.Once
+
 type PairingSession struct {
 	PIN        string
 	DeviceName string
@@ -38,14 +40,19 @@ func (h *AuthHandler) generatePIN() string {
 	return fmt.Sprintf("%04d", n.Int64()+1000)
 }
 
+var generatedSecret []byte
+
 func (h *AuthHandler) getSecret() []byte {
 	secret := h.cfg.Auth.JWTSecret
-	if secret == "" {
+	if secret != "" {
+		return []byte(secret)
+	}
+	generatedSecretOnce.Do(func() {
 		b := make([]byte, 32)
 		rand.Read(b)
-		secret = fmt.Sprintf("%x", b)
-	}
-	return []byte(secret)
+		generatedSecret = []byte(fmt.Sprintf("%x", b))
+	})
+	return generatedSecret
 }
 
 func (h *AuthHandler) getJWTExpiry() time.Duration {
