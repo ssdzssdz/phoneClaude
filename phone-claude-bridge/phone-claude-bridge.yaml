@@ -1,0 +1,23 @@
+server:
+  listen_tailscale: "100.64.0.1:9527"
+  listen_local: "127.0.0.1:9527"
+
+auth:
+  jwt_secret: ""
+  jwt_ttl: "720h"
+  pin_ttl: "5m"
+
+session:
+  max_sessions: 10
+  idle_timeout: "30m"
+  work_dir_default: "."
+
+claude:
+  binary: "claude"
+  env:
+    ANTHROPIC_BASE_URL: ""
+    ANTHROPIC_AUTH_TOKEN: ""
+    ANTHROPIC_MODEL: ""
+
+notify:
+  fcm_enabled: true
