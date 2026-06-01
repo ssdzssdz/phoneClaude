@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"phone-claude-bridge/auth"
 	"phone-claude-bridge/config"
 	"phone-claude-bridge/session"
 	"phone-claude-bridge/store"
@@ -36,14 +37,18 @@ func run() error {
 	sm := session.NewManager(cfg, db)
 	sm.StartIdleReaper()
 
-	handler := transport.NewHandler(sm, db)
+	ah := auth.NewAuthHandler(cfg)
+	ah.CleanupExpiredPINs()
+
+	handler := transport.NewHandler(sm, db, ah)
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
-	// Start local listener
+	authMux := ah.Middleware(mux)
+
 	localServer := &http.Server{
 		Addr:    cfg.Server.ListenLocal,
-		Handler: mux,
+		Handler: authMux,
 	}
 	go func() {
 		log.Printf("listening on %s (local)", cfg.Server.ListenLocal)
@@ -52,10 +57,9 @@ func run() error {
 		}
 	}()
 
-	// Start Tailscale listener
 	tsServer := &http.Server{
 		Addr:    cfg.Server.ListenTailscale,
-		Handler: mux,
+		Handler: authMux,
 	}
 	go func() {
 		log.Printf("listening on %s (tailscale)", cfg.Server.ListenTailscale)
@@ -66,7 +70,6 @@ func run() error {
 
 	log.Println("phone-claude-bridge is running")
 
-	// Wait for shutdown
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	<-sigCh
